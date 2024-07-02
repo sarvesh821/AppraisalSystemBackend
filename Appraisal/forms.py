@@ -18,7 +18,7 @@ class RegisterEmployeeForm(UserCreationForm):
 
     class Meta:
         model = User
-        fields = ('username', 'email', 'first_name', 'last_name', 'date_of_joining','designation','contact_no','role','password1', 'password2')
+        fields = ('username', 'email', 'first_name', 'last_name', 'date_of_joining','designation','contact_no','role','password1')
     
     def __init__(self, *args, **kwargs):
         super(RegisterEmployeeForm, self).__init__(*args, **kwargs)
