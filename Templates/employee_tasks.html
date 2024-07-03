@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <h2>Tasks for {{ employee.first_name }} {{ employee.last_name }}</h2>
+<ul>
+  {% for task in tasks %}
+    <li>
+      <strong>Description:</strong> {{ task.description }}<br>
+      <strong>Time Taken:</strong> {{ task.time_taken }}<br>
+      <strong>Is Appraisable:</strong> {{ task.is_appraisable }}<br>
+      {% if task.rating %}
+        <strong>Rating:</strong> {{ task.rating }}
+      {% else %}
+        <form action="{% url 'save_rating' task.id %}" method="POST">
+          {% csrf_token %}
+          <label for="rating">Rating:</label>
+          <input type="number" id="rating" name="rating" min="1" max="5" required>
+          <button type="submit">Save Rating</button>
+        </form>
+      {% endif %}
+    </li>
+  {% endfor %}
+</ul>
+</body>
+</html>
