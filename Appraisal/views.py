@@ -1,11 +1,12 @@
 from django.shortcuts import get_object_or_404, render, redirect
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login,logout
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required,user_passes_test
 from django.shortcuts import render, redirect
 from .forms import AdminAttributesRatingForm, AdminTaskRatingForm, RegisterEmployeeForm, TaskForm
-from django.contrib.auth import login
-from .models import Attributes, Employee, Task
+from django.db.models import Q
+
+from .models import Attributes, Employee, Task,User
 def BASE(request):
     return render(request,'firstPage.html')
 def login_view(request):
@@ -22,22 +23,38 @@ def login_view(request):
         else:
             messages.error(request, 'Invalid username or password.')
     return render(request, 'login.html')
-
+def logout_view(request):
+    logout(request)
+    return redirect('login')
 @login_required
 def admin_dashboard(request):
-    employees_with_tasks = Employee.objects.filter(task__is_appraisable=True).distinct()
+    employees_with_tasks = Employee.objects.filter(
+        Q(task__is_appraisable=True) & Q(task__rating__isnull=True)
+    ).distinct()
 
     return render(request, 'admin.html', {'employees_with_tasks': employees_with_tasks})
-# @login_required
-# def admin_dashboard(request):
-#     tasks_for_appraisal = Task.objects.filter(is_appraisable=True).select_related('employee')
-#     return render(request, 'admin.html', {'tasks_for_appraisal': tasks_for_appraisal})
+
 @login_required
 def employee_tasks(request, employee_id):
     employee = get_object_or_404(Employee, id=employee_id)
     tasks = Task.objects.filter(employee=employee)
 
     return render(request, 'employee_tasks.html', {'employee': employee, 'tasks': tasks})
+
+
+# def employee_tasks(request, employee_id):
+#     employee = get_object_or_404(Employee, id=employee_id)
+#     tasks = Task.objects.filter(employee=employee)
+    
+#     # Check if all attributes for the employee are null
+#     attributes_null = all(getattr(employee.attributes, f'attribute{i}', None) is None for i in range(1, 11))
+    
+#     context = {
+#         'employee': employee,
+#         'tasks': tasks,
+#         'attributes_null': attributes_null,
+#     }
+#     return render(request, 'employee_tasks.html', context)
 @login_required
 def employee_dashboard(request):
     return render(request, 'employee.html')
@@ -102,22 +119,24 @@ def save_rating(request, task_id):
         return redirect('admin_dashboard') 
     else:
         return render(request, 'error.html', {'message': 'Method not allowed.'})
-# def rate_employee_attributes(request, employee_id):
-#     employee = get_object_or_404(Employee, id=employee_id)
-#     attributes, created = Attributes.objects.get_or_create(employee=employee.user)  # Pass employee.user here
 
-#     if request.method == 'POST':
-#         attributes_form = AdminAttributesRatingForm(request.POST, instance=attributes)
-#         if attributes_form.is_valid():
-#             attributes_form.save()
-#             return redirect('admin_dashboard')
-#     else:
-#         attributes_form = AdminAttributesRatingForm(instance=attributes)
+@login_required
+def rate_employee_attributes(request, employee_id):
+    employee = get_object_or_404(Employee, id=employee_id)
+    attributes, created = Attributes.objects.get_or_create(employee=employee)
+
+    if request.method == 'POST':
+        attributes_form = AdminAttributesRatingForm(request.POST, instance=attributes)
+        if attributes_form.is_valid():
+            attributes_form.save()
+            return redirect('admin_dashboard')
+    else:
+        attributes_form = AdminAttributesRatingForm(instance=attributes)
     
-#     return render(request, 'rate_attributes.html', {
-#         'attributes_form': attributes_form,
-#         'employee': employee
-#     })
+    return render(request, 'rate_attributes.html', {
+        'attributes_form': attributes_form,
+        'employee': employee
+    })
 @login_required
 def request_appraisal(request):
     employee = request.user.employee

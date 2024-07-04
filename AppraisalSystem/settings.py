@@ -38,7 +38,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'Appraisal'
+    # 'rest_framework.authtoken',
+    'Appraisal',
+    'rest_framework',
 ]
 
 MIDDLEWARE = [
@@ -50,7 +52,18 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-
+# REST_FRAMEWORK = {
+#     'DEFAULT_AUTHENTICATION_CLASSES': (
+#         'rest_framework.authentication.TokenAuthentication',  # Use Token Authentication
+#         'rest_framework.authentication.SessionAuthentication',  # Optional: Use Session Authentication for web browsers
+#         'rest_framework_simplejwt.authentication.JWTAuthentication',  # Use JWT Authentication (optional)
+#         # Add other authentication classes as needed
+#     ),
+#     'DEFAULT_PERMISSION_CLASSES': (
+#         'rest_framework.permissions.IsAuthenticated',  # Default to require authentication globally
+#         # Adjust permissions as per your requirements
+#     ),
+# }
 ROOT_URLCONF = 'AppraisalSystem.urls'
 
 TEMPLATES = [

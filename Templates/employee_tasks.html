@@ -4,27 +4,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-    <h2>Tasks for {{ employee.first_name }} {{ employee.last_name }}</h2>
+  
 <ul>
-  {% for task in tasks %}
-    <li>
-      <strong>Description:</strong> {{ task.description }}<br>
-      <strong>Time Taken:</strong> {{ task.time_taken }}<br>
-      <strong>Is Appraisable:</strong> {{ task.is_appraisable }}<br>
-      {% if task.rating %}
-        <strong>Rating:</strong> {{ task.rating }}
-      {% else %}
-        <form action="{% url 'save_rating' task.id %}" method="POST">
-          {% csrf_token %}
-          <label for="rating">Rating:</label>
-          <input type="number" id="rating" name="rating" min="1" max="5" required>
-          <button type="submit">Save Rating</button>
-        </form>
-      {% endif %}
-    </li>
-  {% endfor %}
-</ul>
+    <div class="container">
+        <h2>Tasks for {{ employee.first_name }} {{ employee.last_name }}</h2>
+        <ul>
+            {% for task in tasks %}
+                {% if task.rating <= 0 or task.rating is None %}
+                    <div class="task-item">
+                        <h3>Description: {{ task.description }}</h3>
+                        <p>Time Taken: {{ task.time_taken }}</p>
+                        <p>Is Appraisable: {{ task.is_appraisable }}</p>
+                        <form action="{% url 'save_rating' task.id %}" method="POST">
+                            {% csrf_token %}
+                            <label for="rating">Rating:</label>
+                            <input type="number" id="rating" name="rating" min="1" max="5" required>
+                            <button type="submit" class="btn btn-primary">Save Rating</button>
+                        </form>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </ul>
+        <a href="{% url 'rate_employee_attributes' employee.id %}" class="btn btn-primary">Rate Attributes</a>
+    </div>
+
+
+   
 </body>
 </html>

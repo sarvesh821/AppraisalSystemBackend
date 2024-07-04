@@ -30,34 +30,20 @@ class Task(models.Model):
     time_taken = models.DurationField()
     is_appraisable = models.BooleanField(default=False)
     rating = models.IntegerField(null=True, blank=True)
+    
 
 class Attributes(models.Model):
-    employee = models.ForeignKey(User, on_delete=models.CASCADE)
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
     attribute1 = models.IntegerField(null=True, blank=True)
     attribute2 = models.IntegerField(null=True, blank=True)
-
-   
     attribute3 = models.IntegerField(null=True, blank=True)
-
-   
     attribute4 = models.IntegerField(null=True, blank=True)
-
-   
     attribute5 = models.IntegerField(null=True, blank=True)
-
-  
     attribute6 = models.IntegerField(null=True, blank=True)
-
-   
     attribute7 = models.IntegerField(null=True, blank=True)
-
-  
     attribute8 = models.IntegerField(null=True, blank=True)
-
-   
     attribute9 = models.IntegerField(null=True, blank=True)
-
     attribute10 = models.IntegerField(null=True, blank=True)
 
     def __str__(self):
-        return self.employee.username
+        return self.employee.user.username

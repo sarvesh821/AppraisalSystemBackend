@@ -7,6 +7,7 @@
 </head>
 <body>
     <h2>Employee Dashboard</h2>
+    <a href="{% url 'logout' %}"><button>logout</button></a>
   <a href="{% url 'create_task' %}" class="btn btn-primary">Add Task</a>
   {% if request.user.employee.has_completed_one_year %}
     <form method="post" action="{% url 'request_appraisal' %}">
