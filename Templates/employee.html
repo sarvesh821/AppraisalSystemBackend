@@ -10,10 +10,13 @@
     <a href="{% url 'logout' %}"><button>logout</button></a>
   <a href="{% url 'create_task' %}" class="btn btn-primary">Add Task</a>
   {% if request.user.employee.has_completed_one_year %}
-    <form method="post" action="{% url 'request_appraisal' %}">
-      {% csrf_token %}
-      <button type="submit" class="btn btn-warning">Send Tasks for Appraisal</button>
-    </form>
-  {% endif %}
+  {% if tasks_without_rating %}
+  <form method="post" action="{% url 'request_appraisal' %}">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-warning">Send Tasks for Appraisal</button>
+  </form>
+{% endif %}
+
+{% endif %}
 </body>
 </html>

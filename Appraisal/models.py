@@ -47,3 +47,11 @@ class Attributes(models.Model):
 
     def __str__(self):
         return self.employee.user.username
+    def all_attributes_not_none(self):
+     
+        required_attributes = ['attribute1', 'attribute2', 'attribute3', 'attribute4', 'attribute5',
+                               'attribute6', 'attribute7', 'attribute8', 'attribute9', 'attribute10']
+        for attr in required_attributes:
+            if getattr(self, attr) is not None:
+                return False
+        return True
