@@ -40,7 +40,10 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     # 'rest_framework.authtoken',
     'Appraisal',
+    'corsheaders',
     'rest_framework',
+    'rest_framework.authtoken',
+    
 ]
 
 MIDDLEWARE = [
@@ -51,6 +54,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+     'corsheaders.middleware.CorsMiddleware',
 ]
 # REST_FRAMEWORK = {
 #     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -64,7 +68,17 @@ MIDDLEWARE = [
 #         # Adjust permissions as per your requirements
 #     ),
 # }
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",  # React development server
+]
 ROOT_URLCONF = 'AppraisalSystem.urls'
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.TokenAuthentication',
+        # Add other authentication classes as needed
+    ),
+}
 
 TEMPLATES = [
     {
@@ -94,6 +108,7 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+CSRF_USE_SESSIONS = False
 
 
 # Password validation

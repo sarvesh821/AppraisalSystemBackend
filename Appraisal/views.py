@@ -3,41 +3,82 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.shortcuts import render, redirect
+
 from .forms import (
     AdminAttributesRatingForm,
     AdminTaskRatingForm,
     RegisterEmployeeForm,
     TaskForm,
 )
+from rest_framework.response import Response
+from rest_framework.decorators import api_view,permission_classes
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q
 from .models import Attributes, Employee, Task, User
-
-
+from Api.serializers import EmployeeSerializer, TaskSerializer
+from rest_framework.authtoken.models import Token
 def BASE(request):
     return render(request, "firstPage.html")
 
 
+@api_view(['POST'])
 def login_view(request):
-    if request.method == "POST":
-        username = request.POST.get("username")
-        password = request.POST.get("password")
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
-            login(request, user)
-            if user.is_staff:
-                return redirect("admin_dashboard")
-            else:
-                return redirect("employee_dashboard")
-        else:
-            messages.error(request, "Invalid username or password.")
-    return render(request, "login.html")
+    username = request.data.get('username')
+    password = request.data.get('password')
+    user = authenticate(request, username=username, password=password)
+    
+    if user is not None:
+        login(request, user)
+        token, created = Token.objects.get_or_create(user=user)
+        return Response({'message': 'Login successful', 'is_staff': user.is_staff,'token':token.key}, status=status.HTTP_200_OK)
+    else:
+        return Response({'error': 'Invalid username or password'}, status=status.HTTP_400_BAD_REQUEST)
 
 
+
+
+    
+   
+        
+        
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+
+def employee_detail(request):
+    employee = Employee.objects.get(user=request.user)
+    serializer = EmployeeSerializer(employee)
+    return Response(serializer.data)
+
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def logout_view(request):
     logout(request)
-    return redirect("login")
+    return Response({"detail": "Successfully logged out."}, status=status.HTTP_200_OK)
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def employee_tasks(request):
+    try:
+        employee = request.user.employee
+        tasks_to_rate = Task.objects.filter(employee=employee, rating=None)
+        rated_tasks = Task.objects.filter(employee=employee).exclude(rating=None)
 
+        tasks_to_rate_serializer = TaskSerializer(tasks_to_rate, many=True)
+        rated_tasks_serializer = TaskSerializer(rated_tasks, many=True)
+
+        return Response({
+            'tasks_to_rate': tasks_to_rate_serializer.data,
+            'rated_tasks': rated_tasks_serializer.data,
+        })
+    except Task.DoesNotExist:
+        return Response({'error': 'Tasks not found'}, status=404)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
 @login_required
 def admin_dashboard(request):
     employees_with_tasks = Employee.objects.filter(
@@ -106,18 +147,16 @@ def register(request):
     return render(request, "register.html", {"form": form})
 
 
-@login_required
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def create_task(request):
-    if request.method == "POST":
-        form = TaskForm(request.POST)
-        if form.is_valid():
-            task = form.save(commit=False)
-            task.employee = request.user.employee
-            task.save()
-            return redirect("employee_dashboard")
-    else:
-        form = TaskForm()
-    return render(request, "create_task.html", {"form": form})
+    form = TaskForm(request.data)
+    if form.is_valid():
+        task = form.save(commit=False)
+        task.employee = request.user.employee
+        task.save()
+        return Response({'message': 'Task created successfully'}, status=status.HTTP_201_CREATED)
+    return Response(form.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @login_required

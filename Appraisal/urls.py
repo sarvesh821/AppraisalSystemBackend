@@ -19,5 +19,15 @@ urlpatterns = [
         views.rate_employee_attributes,
         name="rate_employee_attributes",
     ),
+    
+    
+    
+    
+    
+      path('api/employee-tasks/', views.employee_tasks, name='employee_tasks'),
+    path('api/create-task/', views.create_task, name='create_task'),
+    path('api/employee-detail/', views.employee_detail, name='employee_detail'),
+     path('api/login/', views.login_view, name='login'),
+     path('api/logout/', views.logout_view, name='logout'),  
     path("api/", include("Api.urls")),
 ]
