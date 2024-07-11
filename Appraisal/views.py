@@ -1,9 +1,10 @@
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.shortcuts import render, redirect
-
+from django.views.decorators.csrf import csrf_protect
 from .forms import (
     AdminAttributesRatingForm,
     AdminTaskRatingForm,
@@ -16,7 +17,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q
 from .models import Attributes, Employee, Task, User
-from Api.serializers import EmployeeSerializer, TaskSerializer
+from Api.serializers import EmployeeSerializer ,TaskSerializer
 from rest_framework.authtoken.models import Token
 def BASE(request):
     return render(request, "firstPage.html")
@@ -63,6 +64,12 @@ def logout_view(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def employee_tasks(request):
+    print(f"Authenticated user: {request.user}")
+    if request.user.is_authenticated:
+        print("User is authenticated")
+    else:
+        print("User is not authenticated")
+
     try:
         employee = request.user.employee
         tasks_to_rate = Task.objects.filter(employee=employee, rating=None)
@@ -79,74 +86,7 @@ def employee_tasks(request):
         return Response({'error': 'Tasks not found'}, status=404)
     except Exception as e:
         return Response({'error': str(e)}, status=500)
-@login_required
-def admin_dashboard(request):
-    employees_with_tasks = Employee.objects.filter(
-        Q(task__is_appraisable=True) & Q(task__rating__isnull=True)
-    ).distinct()
-
-    return render(request, "admin.html", {"employees_with_tasks": employees_with_tasks})
-
-
-@login_required
-def employee_dashboard(request):
-    employee = request.user.employee
-    tasks_without_rating = Task.objects.filter(
-        employee=employee, rating__isnull=True
-    ).exists()
-
-    context = {
-        "employee": employee,
-        "tasks_without_rating": tasks_without_rating,
-    }
-    return render(request, "employee.html", context)
-
-
-@login_required
-def employee_tasks(request, employee_id):
-    employee = get_object_or_404(Employee, id=employee_id)
-    tasks = Task.objects.filter(employee=employee)
-
-    return render(
-        request, "employee_tasks.html", {"employee": employee, "tasks": tasks}
-    )
-
-
-def register(request):
-    if request.method == "POST":
-        form = RegisterEmployeeForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            user.refresh_from_db()
-
-            date_of_joining = form.cleaned_data.get("date_of_joining")
-            designation = form.cleaned_data.get("designation")
-            contact_no = form.cleaned_data.get("contact_no")
-            role = form.cleaned_data.get("role")
-            email = form.cleaned_data.get("email")
-            first_name = form.cleaned_data.get("first_name")
-            last_name = form.cleaned_data.get("last_name")
-
-            Employee.objects.create(
-                user=user,
-                date_of_joining=date_of_joining,
-                designation=designation,
-                contact_no=contact_no,
-                role=role,
-                email=email,
-                first_name=first_name,
-                last_name=last_name,
-            )
-
-            login(request, user)
-            return redirect(
-                "admin_dashboard" if role == "ADMIN" else "employee_dashboard"
-            )
-    else:
-        form = RegisterEmployeeForm()
-    return render(request, "register.html", {"form": form})
-
-
+    
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_task(request):
@@ -156,7 +96,89 @@ def create_task(request):
         task.employee = request.user.employee
         task.save()
         return Response({'message': 'Task created successfully'}, status=status.HTTP_201_CREATED)
-    return Response(form.errors, status=status.HTTP_400_BAD_REQUEST)
+    return Response(form.errors, status=status.HTTP_400_BAD_REQUEST)  
+
+@login_required
+def send_tasks_for_appraisal(request):
+    if request.method == "POST":
+        employee = request.user.employee  
+        tasks = Task.objects.filter(employee=employee, is_appraisable=True)
+        
+       
+        tasks.update(is_appraisable=False)  # Example: Update tasks to mark them as not appraisable
+        
+        return JsonResponse({'message': 'Tasks sent for appraisal successfully'})
+    
+    # Handle other HTTP methods if needed
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+    
+    
+
+@api_view(['POST'])
+def register_employee(request):
+    serializer = EmployeeSerializer(data=request.data)
+    
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+def current_employees(request):
+    employees_count = Employee.objects.count()
+    return Response({'count': employees_count})
+@api_view(['GET'])
+def employees_with_unrated_tasks_count(request):
+   
+    employees = Employee.objects.filter(Q(task__is_appraisable=True) & Q(task__rating__isnull=True)).distinct()
+    count = employees.count()
+    return Response({'count': count})
+@api_view(['GET'])
+def EmployeesWithTasksForRating(request):
+   
+    employees = Employee.objects.filter(Q(task__is_appraisable=True) & Q(task__rating__isnull=True)).distinct()
+    serializer = EmployeeSerializer(employees, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+def get_employee_tasks(request, employee_id):
+    try:
+        tasks = Task.objects.filter(employee__id=employee_id,rating__isnull=True)
+        serializer = TaskSerializer(tasks, many=True)
+        return Response(serializer.data)
+    except Task.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 @login_required

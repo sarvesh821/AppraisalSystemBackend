@@ -1,15 +1,19 @@
 from rest_framework import serializers
+from django.contrib.auth.models import User
 from Appraisal.models import Employee, Task, Attributes
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email']
 
 class EmployeeSerializer(serializers.ModelSerializer):
-    has_completed_one_year = serializers.SerializerMethodField()
+  
 
     class Meta:
         model = Employee
-        fields = ['id', 'date_of_joining', 'designation', 'contact_no', 'role', 'email', 'first_name', 'last_name', 'has_completed_one_year']
+        fields = ['id', 'user', 'date_of_joining', 'designation', 'contact_no', 'role', 'email', 'first_name', 'last_name', 'has_completed_one_year']
 
-    def get_has_completed_one_year(self, obj):
-        return obj.has_completed_one_year()
+   
 
 class TaskSerializer(serializers.ModelSerializer):
     class Meta:

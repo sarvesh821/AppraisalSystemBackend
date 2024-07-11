@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework',
     'rest_framework.authtoken',
+ 
     
 ]
 
@@ -69,15 +70,17 @@ MIDDLEWARE = [
 #     ),
 # }
 
+
+ 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  # React development server
+    "http://localhost:5173",  
 ]
 ROOT_URLCONF = 'AppraisalSystem.urls'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.TokenAuthentication',
-        # Add other authentication classes as needed
     ),
+  
 }
 
 TEMPLATES = [

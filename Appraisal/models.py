@@ -14,13 +14,14 @@ class Employee(models.Model):
     date_of_joining = models.DateField()
     designation = models.CharField(max_length=100)
     contact_no = models.CharField(max_length=15)
-    role = models.CharField(max_length=10, choices=ROLE_CHOICES,default='EMPLOYEE')
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='EMPLOYEE')
     email = models.EmailField()
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
 
     def __str__(self):
         return self.user.username
+
     def has_completed_one_year(self):
         return timezone.now().date() >= self.date_of_joining + timedelta(days=365)
 
