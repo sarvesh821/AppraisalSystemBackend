@@ -35,16 +35,16 @@ class Task(models.Model):
 
 class Attributes(models.Model):
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
-    attribute1 = models.IntegerField(null=True, blank=True)
-    attribute2 = models.IntegerField(null=True, blank=True)
-    attribute3 = models.IntegerField(null=True, blank=True)
-    attribute4 = models.IntegerField(null=True, blank=True)
-    attribute5 = models.IntegerField(null=True, blank=True)
-    attribute6 = models.IntegerField(null=True, blank=True)
-    attribute7 = models.IntegerField(null=True, blank=True)
-    attribute8 = models.IntegerField(null=True, blank=True)
-    attribute9 = models.IntegerField(null=True, blank=True)
-    attribute10 = models.IntegerField(null=True, blank=True)
+    time_management = models.IntegerField(null=True, blank=True)
+    communication = models.IntegerField(null=True, blank=True)
+    creativity = models.IntegerField(null=True, blank=True)
+    respect_of_deadlines = models.IntegerField(null=True, blank=True)
+    ability_to_plan = models.IntegerField(null=True, blank=True)
+    problem_solving = models.IntegerField(null=True, blank=True)
+    passion_to_work = models.IntegerField(null=True, blank=True)
+    confidence = models.IntegerField(null=True, blank=True)
+    adaptable = models.IntegerField(null=True, blank=True)
+    learning_power = models.IntegerField(null=True, blank=True)
 
     def __str__(self):
         return self.employee.user.username

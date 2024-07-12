@@ -49,18 +49,18 @@ class AdminAttributesRatingForm(forms.ModelForm):
     class Meta:
         model = Attributes
         fields = [
-            'attribute1', 'attribute2', 'attribute3', 'attribute4', 'attribute5',
-            'attribute6', 'attribute7', 'attribute8', 'attribute9', 'attribute10'
+            'time_management', 'communication', 'creativity', 'respect_of_deadlines', 'ability_to_plan',
+            'problem_solving', 'passion_to_work', 'confidence', 'adaptable', 'learning_power'
         ]
         widgets = {
-            'attribute1': forms.NumberInput(attrs={'class': 'form-control'}),
-            'attribute2': forms.NumberInput(attrs={'class': 'form-control'}),
-            'attribute3': forms.NumberInput(attrs={'class': 'form-control'}),
-            'attribute4': forms.NumberInput(attrs={'class': 'form-control'}),
-            'attribute5': forms.NumberInput(attrs={'class': 'form-control'}),
-            'attribute6': forms.NumberInput(attrs={'class': 'form-control'}),
-            'attribute7': forms.NumberInput(attrs={'class': 'form-control'}),
-            'attribute8': forms.NumberInput(attrs={'class': 'form-control'}),
-            'attribute9': forms.NumberInput(attrs={'class': 'form-control'}),
-            'attribute10': forms.NumberInput(attrs={'class': 'form-control'}),
+            'time_management': forms.NumberInput(attrs={'class': 'form-control'}),
+            'communication': forms.NumberInput(attrs={'class': 'form-control'}),
+            'creativity': forms.NumberInput(attrs={'class': 'form-control'}),
+            'respect_of_deadlines': forms.NumberInput(attrs={'class': 'form-control'}),
+            'ability_to_plan': forms.NumberInput(attrs={'class': 'form-control'}),
+            'problem_solving': forms.NumberInput(attrs={'class': 'form-control'}),
+            'passion_to_work': forms.NumberInput(attrs={'class': 'form-control'}),
+            'confidence': forms.NumberInput(attrs={'class': 'form-control'}),
+            'adaptable': forms.NumberInput(attrs={'class': 'form-control'}),
+            'learning_power': forms.NumberInput(attrs={'class': 'form-control'}),
         }

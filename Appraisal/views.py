@@ -1,3 +1,5 @@
+from datetime import timedelta
+from django.utils import timezone
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib.auth import authenticate, login, logout
@@ -19,6 +21,18 @@ from django.db.models import Q
 from .models import Attributes, Employee, Task, User
 from Api.serializers import EmployeeSerializer ,TaskSerializer
 from rest_framework.authtoken.models import Token
+from django.views.decorators.csrf import csrf_exempt
+from django.middleware.csrf import get_token
+from django.http import JsonResponse
+
+def get_csrf_token(request):
+    token = get_token(request)
+    response = JsonResponse({'csrfToken': token})
+    response.set_cookie('csrftoken', token)  
+    return response
+
+
+
 def BASE(request):
     return render(request, "firstPage.html")
 
@@ -72,7 +86,7 @@ def employee_tasks(request):
 
     try:
         employee = request.user.employee
-        tasks_to_rate = Task.objects.filter(employee=employee, rating=None)
+        tasks_to_rate = Task.objects.filter(employee=employee, rating=None,is_appraisable=True )
         rated_tasks = Task.objects.filter(employee=employee).exclude(rating=None)
 
         tasks_to_rate_serializer = TaskSerializer(tasks_to_rate, many=True)
@@ -98,29 +112,56 @@ def create_task(request):
         return Response({'message': 'Task created successfully'}, status=status.HTTP_201_CREATED)
     return Response(form.errors, status=status.HTTP_400_BAD_REQUEST)  
 
+
 @login_required
+@csrf_exempt
 def send_tasks_for_appraisal(request):
     if request.method == "POST":
-        employee = request.user.employee  
-        tasks = Task.objects.filter(employee=employee, is_appraisable=True)
-        
-       
-        tasks.update(is_appraisable=False)  # Example: Update tasks to mark them as not appraisable
-        
-        return JsonResponse({'message': 'Tasks sent for appraisal successfully'})
-    
-    # Handle other HTTP methods if needed
+        employee = request.user.employee
+        tasks = Task.objects.filter(employee=employee, is_appraisable=True,rating__isnull=True)
+        if not tasks.exists():
+            return JsonResponse({'error': 'No tasks available for appraisal'}, status=404)
+        tasks.update(is_appraisable=False)
+        return JsonResponse({'message': 'Tasks sent for appraisal successfully'}, status=200)
     return JsonResponse({'error': 'Invalid request method'}, status=400)
     
     
 
 @api_view(['POST'])
 def register_employee(request):
-    serializer = EmployeeSerializer(data=request.data)
+   
+    user_data = {
+        'username': request.data.get('username'),
+        'email': request.data.get('email'),
+        'password': request.data.get('password')
+    }
+    
+  
+    user = User.objects.create_user(
+        username=user_data['username'],
+        email=user_data['email'],
+        password=user_data['password']
+    )
+    
+  
+    employee_data = {
+        'user': user.id,  
+        'date_of_joining': request.data.get('dateOfJoining'),
+        'designation': request.data.get('designation'),
+        'contact_no': request.data.get('contactNo'),
+        'role': request.data.get('role'),
+        'email': request.data.get('email'),
+        'first_name': request.data.get('firstName'),
+        'last_name': request.data.get('lastName')
+    }
+    
+
+    serializer = EmployeeSerializer(data=employee_data)
     
     if serializer.is_valid():
         serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.data, status=status.HTTP_201_CREATED,)
+    
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -128,16 +169,22 @@ def register_employee(request):
 def current_employees(request):
     employees_count = Employee.objects.count()
     return Response({'count': employees_count})
+
+
+
 @api_view(['GET'])
 def employees_with_unrated_tasks_count(request):
-   
-    employees = Employee.objects.filter(Q(task__is_appraisable=True) & Q(task__rating__isnull=True)).distinct()
+    one_year_ago = timezone.now().date() - timedelta(days=365)
+    employees = Employee.objects.filter(Q(task__is_appraisable=True) & Q(task__rating__isnull=True) & Q(date_of_joining__lte=one_year_ago)).distinct()
     count = employees.count()
     return Response({'count': count})
+
+
+
 @api_view(['GET'])
 def EmployeesWithTasksForRating(request):
-   
-    employees = Employee.objects.filter(Q(task__is_appraisable=True) & Q(task__rating__isnull=True)).distinct()
+    one_year_ago = timezone.now().date() - timedelta(days=365)
+    employees = Employee.objects.filter(Q(task__is_appraisable=True) & Q(task__rating__isnull=True) & Q(date_of_joining__lte=one_year_ago)).distinct()
     serializer = EmployeeSerializer(employees, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -151,88 +198,75 @@ def get_employee_tasks(request, employee_id):
     except Task.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
 
+@api_view(['POST'])
+def save_task_rating(request, task_id):
+    try:
+        task = Task.objects.get(id=task_id)
+    except Task.DoesNotExist:
+        return Response({'error': 'Task not found'}, status=status.HTTP_404_NOT_FOUND)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-@login_required
-@user_passes_test(lambda u: u.is_staff)
-def save_rating(request, task_id):
-    if request.method == "POST":
-        rating = request.POST.get("rating")
-        task = get_object_or_404(Task, pk=task_id)
+    rating = request.data.get('rating')
+    if rating is not None and 0 <= rating <= 5:
         task.rating = rating
         task.save()
-
-        employee = task.employee
-
-        if Task.objects.filter(employee=employee, rating__isnull=True).exists():
-
-            return redirect("employee_tasks", employee_id=employee.id)
-        else:
-
-            return redirect("admin_dashboard")
+        return Response({'message': 'Task rating saved successfully'}, status=status.HTTP_200_OK)
     else:
-        return render(request, "error.html", {"message": "Method not allowed."})
+        return Response({'error': 'Invalid rating value'}, status=status.HTTP_400_BAD_REQUEST)
 
 
-@login_required
-def rate_employee_attributes(request, employee_id):
-    employee = get_object_or_404(Employee, id=employee_id)
+@api_view(['POST'])
+def save_attribute_ratings(request, employee_id):
+    try:
+        employee = Employee.objects.get(id=employee_id)
+    except Employee.DoesNotExist:
+        return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    data = request.data.get('attributes', [])
+    if len(data) != 10:
+        return Response({'error': 'Exactly 10 attribute ratings are required'}, status=status.HTTP_400_BAD_REQUEST)
+
     attributes, created = Attributes.objects.get_or_create(employee=employee)
+    attributes.time_management = data[0]
+    attributes.communication = data[1]
+    attributes.creativity = data[2]
+    attributes.respect_of_deadlines = data[3]
+    attributes.ability_to_plan = data[4]
+    attributes.problem_solving = data[5]
+    attributes.passion_to_work = data[6]
+    attributes.confidence = data[7]
+    attributes.adaptable = data[8]
+    attributes.learning_power = data[9]
+    attributes.save()
 
-    if request.method == "POST":
-        attributes_form = AdminAttributesRatingForm(request.POST, instance=attributes)
-        if attributes_form.is_valid():
-            attributes_form.save()
-
-            return redirect("employee_tasks", employee_id=employee_id)
-    else:
-        attributes_form = AdminAttributesRatingForm(instance=attributes)
-
-    return render(
-        request,
-        "rate_attributes.html",
-        {"attributes_form": attributes_form, "employee": employee},
-    )
+    return Response({'message': 'Attribute ratings saved successfully'}, status=status.HTTP_200_OK)
 
 
-@login_required
-def request_appraisal(request):
-    employee = request.user.employee
-    if employee.has_completed_one_year():
-        Task.objects.filter(employee=employee).update(is_appraisable=True)
 
-        return redirect("employee_dashboard")
-    else:
-        return render(
-            request,
-            "error.html",
-            {"message": "You are not eligible for appraisal yet."},
-        )
+@api_view(['GET'])
+def get_employee_details(request, id):
+    try:
+        employee = Employee.objects.get(id=id)
+        serializer = EmployeeSerializer(employee)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Employee.DoesNotExist:
+        return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
