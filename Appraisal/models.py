@@ -27,9 +27,11 @@ class Employee(models.Model):
 
 class Task(models.Model):
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
+    title = models.CharField(max_length=100,default='Default Title')
     description = models.TextField()
     time_taken = models.DurationField()
     is_appraisable = models.BooleanField(default=False)
+    task_send=models.BooleanField(default=False)
     rating = models.IntegerField(null=True, blank=True)
     
 

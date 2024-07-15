@@ -61,7 +61,6 @@ def login_view(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-
 def employee_detail(request):
     employee = Employee.objects.get(user=request.user)
     serializer = EmployeeSerializer(employee)
@@ -74,6 +73,8 @@ def employee_detail(request):
 def logout_view(request):
     logout(request)
     return Response({"detail": "Successfully logged out."}, status=status.HTTP_200_OK)
+
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -100,6 +101,9 @@ def employee_tasks(request):
         return Response({'error': 'Tasks not found'}, status=404)
     except Exception as e:
         return Response({'error': str(e)}, status=500)
+  
+  
+  
     
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -113,15 +117,21 @@ def create_task(request):
     return Response(form.errors, status=status.HTTP_400_BAD_REQUEST)  
 
 
-@login_required
-@csrf_exempt
+
+
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def send_tasks_for_appraisal(request):
     if request.method == "POST":
         employee = request.user.employee
-        tasks = Task.objects.filter(employee=employee, is_appraisable=True,rating__isnull=True)
+        if employee is None:
+            return JsonResponse({'error': 'User has no associated employee profile'}, status=400)
+        tasks = Task.objects.filter(employee=employee, is_appraisable=True, rating=None,task_send=False)
         if not tasks.exists():
             return JsonResponse({'error': 'No tasks available for appraisal'}, status=404)
-        tasks.update(is_appraisable=False)
+        tasks.update(task_send=True)  
         return JsonResponse({'message': 'Tasks sent for appraisal successfully'}, status=200)
     return JsonResponse({'error': 'Invalid request method'}, status=400)
     
@@ -175,7 +185,7 @@ def current_employees(request):
 @api_view(['GET'])
 def employees_with_unrated_tasks_count(request):
     one_year_ago = timezone.now().date() - timedelta(days=365)
-    employees = Employee.objects.filter(Q(task__is_appraisable=True) & Q(task__rating__isnull=True) & Q(date_of_joining__lte=one_year_ago)).distinct()
+    employees = Employee.objects.filter(Q(task__is_appraisable=True) & Q(task__task_send=True) & Q(task__rating__isnull=True) & Q(date_of_joining__lte=one_year_ago)).distinct()
     count = employees.count()
     return Response({'count': count})
 
@@ -184,7 +194,7 @@ def employees_with_unrated_tasks_count(request):
 @api_view(['GET'])
 def EmployeesWithTasksForRating(request):
     one_year_ago = timezone.now().date() - timedelta(days=365)
-    employees = Employee.objects.filter(Q(task__is_appraisable=True) & Q(task__rating__isnull=True) & Q(date_of_joining__lte=one_year_ago)).distinct()
+    employees = Employee.objects.filter( Q(task__rating__isnull=True) & Q(task__task_send=True) & Q(date_of_joining__lte=one_year_ago)).distinct()
     serializer = EmployeeSerializer(employees, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -206,7 +216,7 @@ def save_task_rating(request, task_id):
         return Response({'error': 'Task not found'}, status=status.HTTP_404_NOT_FOUND)
 
     rating = request.data.get('rating')
-    if rating is not None and 0 <= rating <= 5:
+    if rating is not None and 0 <= rating <= 10:
         task.rating = rating
         task.save()
         return Response({'message': 'Task rating saved successfully'}, status=status.HTTP_200_OK)
@@ -251,7 +261,18 @@ def get_employee_details(request, id):
     except Employee.DoesNotExist:
         return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
 
-
+@api_view(['PUT'])
+def edit_employee_details(request,pk):
+    try:
+        employee = Employee.objects.get(pk=pk)
+    except Employee.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+    if request.method=='PUT':
+        serializer = EmployeeSerializer(employee, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 

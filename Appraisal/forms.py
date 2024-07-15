@@ -30,11 +30,13 @@ class RegisterEmployeeForm(UserCreationForm):
 class TaskForm(forms.ModelForm):
     class Meta:
         model = Task
-        fields = ['description', 'time_taken', 'is_appraisable']
+        fields = ['title','description', 'time_taken', 'is_appraisable','task_send']
         widgets = {
+            'title': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control'}),
             'time_taken': forms.TextInput(attrs={'class': 'form-control'}),
             'is_appraisable': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'task_send': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
         
 class AdminTaskRatingForm(forms.ModelForm):
