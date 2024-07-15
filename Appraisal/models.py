@@ -58,3 +58,9 @@ class Attributes(models.Model):
             if getattr(self, attr) is not None:
                 return False
         return True
+    
+class Notification(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    message = models.TextField()
+    is_read = models.BooleanField(default=False)
+    timestamp = models.DateTimeField(auto_now_add=True)

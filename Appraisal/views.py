@@ -18,8 +18,8 @@ from rest_framework.decorators import api_view,permission_classes
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q
-from .models import Attributes, Employee, Task, User
-from Api.serializers import EmployeeSerializer ,TaskSerializer
+from .models import Attributes, Employee, Notification, Task, User
+from Api.serializers import EmployeeSerializer, NotificationSerializer ,TaskSerializer
 from rest_framework.authtoken.models import Token
 from django.views.decorators.csrf import csrf_exempt
 from django.middleware.csrf import get_token
@@ -87,7 +87,7 @@ def employee_tasks(request):
 
     try:
         employee = request.user.employee
-        tasks_to_rate = Task.objects.filter(employee=employee, rating=None,is_appraisable=True )
+        tasks_to_rate = Task.objects.filter(employee=employee, rating=None,is_appraisable=True,task_send=False )
         rated_tasks = Task.objects.filter(employee=employee).exclude(rating=None)
 
         tasks_to_rate_serializer = TaskSerializer(tasks_to_rate, many=True)
@@ -132,6 +132,12 @@ def send_tasks_for_appraisal(request):
         if not tasks.exists():
             return JsonResponse({'error': 'No tasks available for appraisal'}, status=404)
         tasks.update(task_send=True)  
+        admin_users = User.objects.filter(is_staff=True)  
+        for admin in admin_users:
+            Notification.objects.create(
+                user=admin,
+                message=f" {employee.user.first_name} {employee.user.last_name} has sent tasks for appraisal."
+            )
         return JsonResponse({'message': 'Tasks sent for appraisal successfully'}, status=200)
     return JsonResponse({'error': 'Invalid request method'}, status=400)
     
@@ -275,10 +281,19 @@ def edit_employee_details(request,pk):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def notifications(request):
+    notifications = Notification.objects.filter(user=request.user, is_read=False)
+    serializer = NotificationSerializer(notifications, many=True)
+    return Response(serializer.data)
 
 
-
-
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def mark_notifications_as_read(request):
+    Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+    return Response({'message': 'Notifications marked as read'})
 
 
 

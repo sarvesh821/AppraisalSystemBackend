@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from Appraisal.models import Employee, Task, Attributes
+from Appraisal.models import Employee, Task, Attributes,Notification
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -24,4 +24,11 @@ class TaskSerializer(serializers.ModelSerializer):
 class AttributesSerializer(serializers.ModelSerializer):
     class Meta:
         model = Attributes
+        fields = '__all__'
+        
+        
+        
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
         fields = '__all__'

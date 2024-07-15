@@ -2,6 +2,8 @@ from django.urls import path, include
 from . import views
 
 urlpatterns = [
+    path('api/mark-notifications-as-read/',views.mark_notifications_as_read,name='mark_notifications_as_read'),
+    path('api/notifications/',views.notifications,name='notifications'),
     path('api/csrf-token/', views.get_csrf_token, name='get_csrf_token'),
     path('api/employee/<int:id>/', views.get_employee_details, name='get_employee_details'),
     path('api/task/<int:task_id>/rate/', views.save_task_rating, name='save_task_rating'),
