@@ -19,7 +19,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q
 from .models import Attributes, Employee, Notification, Task, User
-from Api.serializers import EmployeeSerializer, NotificationSerializer ,TaskSerializer
+from Api.serializers import AttributesSerializer, EmployeeSerializer, NotificationSerializer ,TaskSerializer
 from rest_framework.authtoken.models import Token
 from django.views.decorators.csrf import csrf_exempt
 from django.middleware.csrf import get_token
@@ -298,8 +298,18 @@ def mark_notifications_as_read(request):
 
 
 
-
-
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def employee_attributes(request):
+    try:
+        employee = request.user.employee
+        attributes = Attributes.objects.get(employee=employee)
+        serializer = AttributesSerializer(attributes)
+        return Response(serializer.data)
+    except Attributes.DoesNotExist:
+        return Response({'error': 'Attributes not found for this employee'}, status=404)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
 
 
 
