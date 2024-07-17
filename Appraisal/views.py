@@ -18,8 +18,8 @@ from rest_framework.decorators import api_view,permission_classes
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q
-from .models import Attributes, Employee, Task, User
-from Api.serializers import EmployeeSerializer ,TaskSerializer
+from .models import Attributes, Employee, Notification, Task, User
+from Api.serializers import AttributesSerializer, EmployeeSerializer, NotificationSerializer ,TaskSerializer
 from rest_framework.authtoken.models import Token
 from django.views.decorators.csrf import csrf_exempt
 from django.middleware.csrf import get_token
@@ -61,7 +61,6 @@ def login_view(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-
 def employee_detail(request):
     employee = Employee.objects.get(user=request.user)
     serializer = EmployeeSerializer(employee)
@@ -75,6 +74,8 @@ def logout_view(request):
     logout(request)
     return Response({"detail": "Successfully logged out."}, status=status.HTTP_200_OK)
 
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def employee_tasks(request):
@@ -86,7 +87,7 @@ def employee_tasks(request):
 
     try:
         employee = request.user.employee
-        tasks_to_rate = Task.objects.filter(employee=employee, rating=None,is_appraisable=True )
+        tasks_to_rate = Task.objects.filter(employee=employee, rating=None,is_appraisable=True,task_send=False )
         rated_tasks = Task.objects.filter(employee=employee).exclude(rating=None)
 
         tasks_to_rate_serializer = TaskSerializer(tasks_to_rate, many=True)
@@ -100,6 +101,9 @@ def employee_tasks(request):
         return Response({'error': 'Tasks not found'}, status=404)
     except Exception as e:
         return Response({'error': str(e)}, status=500)
+  
+  
+  
     
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -113,15 +117,37 @@ def create_task(request):
     return Response(form.errors, status=status.HTTP_400_BAD_REQUEST)  
 
 
-@login_required
-@csrf_exempt
+@api_view(['DELETE'])
+def delete_employee(request, employee_id):
+    try:
+        employee = get_object_or_404(Employee, pk=employee_id)
+        user_id = employee.user.id
+        user = get_object_or_404(User, pk=user_id)
+        user.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def send_tasks_for_appraisal(request):
     if request.method == "POST":
         employee = request.user.employee
-        tasks = Task.objects.filter(employee=employee, is_appraisable=True,rating__isnull=True)
+        if employee is None:
+            return JsonResponse({'error': 'User has no associated employee profile'}, status=400)
+        tasks = Task.objects.filter(employee=employee, is_appraisable=True, rating=None,task_send=False)
         if not tasks.exists():
             return JsonResponse({'error': 'No tasks available for appraisal'}, status=404)
-        tasks.update(is_appraisable=False)
+        tasks.update(task_send=True)  
+        admin_users = User.objects.filter(is_staff=True)  
+        for admin in admin_users:
+            Notification.objects.create(
+                user=admin,
+                message=f" {employee.user.first_name} {employee.user.last_name} has sent tasks for appraisal."
+            )
         return JsonResponse({'message': 'Tasks sent for appraisal successfully'}, status=200)
     return JsonResponse({'error': 'Invalid request method'}, status=400)
     
@@ -152,7 +178,9 @@ def register_employee(request):
         'role': request.data.get('role'),
         'email': request.data.get('email'),
         'first_name': request.data.get('firstName'),
-        'last_name': request.data.get('lastName')
+        'last_name': request.data.get('lastName'),
+        'date_of_birth':request.data.get('dateOfBirth'),
+        'location':request.data.get('location')
     }
     
 
@@ -175,7 +203,7 @@ def current_employees(request):
 @api_view(['GET'])
 def employees_with_unrated_tasks_count(request):
     one_year_ago = timezone.now().date() - timedelta(days=365)
-    employees = Employee.objects.filter(Q(task__is_appraisable=True) & Q(task__rating__isnull=True) & Q(date_of_joining__lte=one_year_ago)).distinct()
+    employees = Employee.objects.filter(Q(task__is_appraisable=True) & Q(task__task_send=True) & Q(task__rating__isnull=True) & Q(date_of_joining__lte=one_year_ago)).distinct()
     count = employees.count()
     return Response({'count': count})
 
@@ -184,7 +212,7 @@ def employees_with_unrated_tasks_count(request):
 @api_view(['GET'])
 def EmployeesWithTasksForRating(request):
     one_year_ago = timezone.now().date() - timedelta(days=365)
-    employees = Employee.objects.filter(Q(task__is_appraisable=True) & Q(task__rating__isnull=True) & Q(date_of_joining__lte=one_year_ago)).distinct()
+    employees = Employee.objects.filter( Q(task__rating__isnull=True) & Q(task__task_send=True) & Q(date_of_joining__lte=one_year_ago)).distinct()
     serializer = EmployeeSerializer(employees, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -206,9 +234,16 @@ def save_task_rating(request, task_id):
         return Response({'error': 'Task not found'}, status=status.HTTP_404_NOT_FOUND)
 
     rating = request.data.get('rating')
-    if rating is not None and 0 <= rating <= 5:
+    if rating is not None and 0 <= rating <= 10:
         task.rating = rating
         task.save()
+        employee = task.employee
+        Notification.objects.create(
+            user=employee.user,
+            message=f'Your task "{task.title}" has been rated.'
+        )
+
+        return Response({'message': 'Task rating saved successfully'}, status=status.HTTP_200_OK)
         return Response({'message': 'Task rating saved successfully'}, status=status.HTTP_200_OK)
     else:
         return Response({'error': 'Invalid rating value'}, status=status.HTTP_400_BAD_REQUEST)
@@ -251,19 +286,55 @@ def get_employee_details(request, id):
     except Employee.DoesNotExist:
         return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
 
+@api_view(['PUT'])
+def edit_employee_details(request,pk):
+    try:
+        employee = Employee.objects.get(pk=pk)
+    except Employee.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+    if request.method=='PUT':
+        serializer = EmployeeSerializer(employee, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def notifications(request):
+    notifications = Notification.objects.filter(user=request.user, is_read=False)
+    serializer = NotificationSerializer(notifications, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def mark_notifications_as_read(request):
+   
+    Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+
+    
+    notifications_to_delete = Notification.objects.filter(user=request.user, is_read=True)
+    deleted_count, _ = notifications_to_delete.delete() 
+    
+    return Response({'message': f'{deleted_count} notifications marked as read and deleted'})
 
 
 
 
-
-
-
-
-
-
-
-
-
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def employee_attributes(request):
+    try:
+        employee = request.user.employee
+        attributes = Attributes.objects.get(employee=employee)
+        serializer = AttributesSerializer(attributes)
+        return Response(serializer.data)
+    except Attributes.DoesNotExist:
+        return Response({'error': 'Attributes not found for this employee'}, status=404)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
 
 
 

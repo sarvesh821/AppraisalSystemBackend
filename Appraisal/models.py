@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-from datetime import timedelta, timezone
+from datetime import date, timedelta, timezone
 from django.utils import timezone
 
 
@@ -12,6 +12,8 @@ class Employee(models.Model):
     
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     date_of_joining = models.DateField()
+    date_of_birth=models.DateField(default=date.today)
+    location=models.CharField(max_length=100,default="unknown")
     designation = models.CharField(max_length=100)
     contact_no = models.CharField(max_length=15)
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='EMPLOYEE')
@@ -21,15 +23,18 @@ class Employee(models.Model):
 
     def __str__(self):
         return self.user.username
+   
 
     def has_completed_one_year(self):
         return timezone.now().date() >= self.date_of_joining + timedelta(days=365)
 
 class Task(models.Model):
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
+    title = models.CharField(max_length=100,default='Default Title')
     description = models.TextField()
-    time_taken = models.DurationField()
+    time_taken = models.IntegerField()
     is_appraisable = models.BooleanField(default=False)
+    task_send=models.BooleanField(default=False)
     rating = models.IntegerField(null=True, blank=True)
     
 
@@ -56,3 +61,9 @@ class Attributes(models.Model):
             if getattr(self, attr) is not None:
                 return False
         return True
+    
+class Notification(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    message = models.TextField()
+    is_read = models.BooleanField(default=False)
+    timestamp = models.DateTimeField(auto_now_add=True)

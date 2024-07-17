@@ -10,16 +10,18 @@ class RegisterEmployeeForm(UserCreationForm):
     ]
     
     date_of_joining = forms.DateField(widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}))
+    date_of_birth = forms.DateField(widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}))
     designation = forms.CharField(max_length=100, widget=forms.TextInput(attrs={'class': 'form-control'}))
     contact_no = forms.CharField(max_length=15, widget=forms.TextInput(attrs={'class': 'form-control'}))
     role = forms.ChoiceField(choices=ROLE_CHOICES, widget=forms.Select(attrs={'class': 'form-control'}))
     email = forms.EmailField(widget=forms.EmailInput(attrs={'class': 'form-control'}))
     first_name = forms.CharField(max_length=50, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    location = forms.CharField(max_length=50, widget=forms.TextInput(attrs={'class': 'form-control'}))
     last_name = forms.CharField(max_length=50, widget=forms.TextInput(attrs={'class': 'form-control'}))
 
     class Meta:
         model = User
-        fields = ('username', 'email', 'first_name', 'last_name', 'date_of_joining','designation','contact_no','role','password1')
+        fields = ('username', 'email', 'first_name','date_of_birth','location', 'last_name', 'date_of_joining','designation','contact_no','role','password1')
     
     def __init__(self, *args, **kwargs):
         super(RegisterEmployeeForm, self).__init__(*args, **kwargs)
@@ -30,11 +32,13 @@ class RegisterEmployeeForm(UserCreationForm):
 class TaskForm(forms.ModelForm):
     class Meta:
         model = Task
-        fields = ['description', 'time_taken', 'is_appraisable']
+        fields = ['title','description', 'time_taken', 'is_appraisable','task_send']
         widgets = {
+            'title': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control'}),
             'time_taken': forms.TextInput(attrs={'class': 'form-control'}),
             'is_appraisable': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'task_send': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
         
 class AdminTaskRatingForm(forms.ModelForm):
