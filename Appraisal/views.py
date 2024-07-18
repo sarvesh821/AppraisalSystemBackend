@@ -7,6 +7,8 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_protect
+
+from Appraisal.permissions import IsAdminUser
 from .forms import (
     AdminAttributesRatingForm,
     AdminTaskRatingForm,
@@ -269,13 +271,14 @@ def save_task_rating(request, task_id):
         )
 
         return Response({'message': 'Task rating saved successfully'}, status=status.HTTP_200_OK)
-        return Response({'message': 'Task rating saved successfully'}, status=status.HTTP_200_OK)
+        
     else:
         return Response({'error': 'Invalid rating value'}, status=status.HTTP_400_BAD_REQUEST)
     
 
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdminUser])
 def save_attribute_ratings(request, employee_id):
     try:
         employee = Employee.objects.get(id=employee_id)
@@ -304,6 +307,7 @@ def save_attribute_ratings(request, employee_id):
 
 
 @api_view(['PUT'])
+@permission_classes([IsAuthenticated, IsAdminUser])
 def edit_employee_details(request,pk):
     try:
         employee = Employee.objects.get(pk=pk)
@@ -319,6 +323,7 @@ def edit_employee_details(request,pk):
 
 
 @api_view(['DELETE'])
+@permission_classes([IsAuthenticated, IsAdminUser])
 def delete_employee(request, employee_id):
     try:
         employee = get_object_or_404(Employee, pk=employee_id)
