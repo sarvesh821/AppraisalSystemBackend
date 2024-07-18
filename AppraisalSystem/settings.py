@@ -74,7 +74,7 @@ MIDDLEWARE = [
 
  
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5175",  
+    "http://localhost:5173",  
 ]
 ROOT_URLCONF = 'AppraisalSystem.urls'
 REST_FRAMEWORK = {
@@ -116,7 +116,7 @@ CSRF_USE_SESSIONS = False
 CSRF_COOKIE_NAME = "csrftoken"
 CSRF_HEADER_NAME = "HTTP_X_CSRFTOKEN"
 CSRF_TRUSTED_ORIGINS = [
-    'http://localhost:5175',  
+    'http://localhost:5173',  
     'http://127.0.0.1:8000', 
 ]
 # Password validation

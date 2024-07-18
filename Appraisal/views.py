@@ -1,11 +1,11 @@
 from datetime import timedelta
 from django.utils import timezone
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, render, redirect
+from django.shortcuts import get_object_or_404, render
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.shortcuts import render, redirect
+from django.shortcuts import render
 from django.views.decorators.csrf import csrf_protect
 from .forms import (
     AdminAttributesRatingForm,
@@ -25,6 +25,9 @@ from django.views.decorators.csrf import csrf_exempt
 from django.middleware.csrf import get_token
 from django.http import JsonResponse
 
+
+
+# //============================================Base===============================================================
 def get_csrf_token(request):
     token = get_token(request)
     response = JsonResponse({'csrfToken': token})
@@ -37,6 +40,31 @@ def BASE(request):
     return render(request, "firstPage.html")
 
 
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def notifications(request):
+    notifications = Notification.objects.filter(user=request.user, is_read=False)
+    serializer = NotificationSerializer(notifications, many=True)
+    return Response(serializer.data)
+
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def mark_notifications_as_read(request):
+   
+    Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+
+    
+    notifications_to_delete = Notification.objects.filter(user=request.user, is_read=True)
+    deleted_count, _ = notifications_to_delete.delete() 
+    
+    return Response({'message': f'{deleted_count} notifications marked as read and deleted'})
+
+
+
+# //====================================================Login Functionalities=========================================
 @api_view(['POST'])
 def login_view(request):
     username = request.data.get('username')
@@ -52,13 +80,15 @@ def login_view(request):
 
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def logout_view(request):
+    logout(request)
+    return Response({"detail": "Successfully logged out."}, status=status.HTTP_200_OK)
 
-    
-   
-        
-        
 
 
+# //===========================================Employee Functionalities=======================================
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def employee_detail(request):
@@ -70,9 +100,15 @@ def employee_detail(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def logout_view(request):
-    logout(request)
-    return Response({"detail": "Successfully logged out."}, status=status.HTTP_200_OK)
+def create_task(request):
+    form = TaskForm(request.data)
+    if form.is_valid():
+        task = form.save(commit=False)
+        task.employee = request.user.employee
+        task.save()
+        return Response({'message': 'Task created successfully'}, status=status.HTTP_201_CREATED)
+    return Response(form.errors, status=status.HTTP_400_BAD_REQUEST)  
+
 
 
 
@@ -87,7 +123,7 @@ def employee_tasks(request):
 
     try:
         employee = request.user.employee
-        tasks_to_rate = Task.objects.filter(employee=employee, rating=None,is_appraisable=True,task_send=False )
+        tasks_to_rate = Task.objects.filter(employee=employee, rating=None,is_appraisable=True )
         rated_tasks = Task.objects.filter(employee=employee).exclude(rating=None)
 
         tasks_to_rate_serializer = TaskSerializer(tasks_to_rate, many=True)
@@ -102,33 +138,6 @@ def employee_tasks(request):
     except Exception as e:
         return Response({'error': str(e)}, status=500)
   
-  
-  
-    
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def create_task(request):
-    form = TaskForm(request.data)
-    if form.is_valid():
-        task = form.save(commit=False)
-        task.employee = request.user.employee
-        task.save()
-        return Response({'message': 'Task created successfully'}, status=status.HTTP_201_CREATED)
-    return Response(form.errors, status=status.HTTP_400_BAD_REQUEST)  
-
-
-@api_view(['DELETE'])
-def delete_employee(request, employee_id):
-    try:
-        employee = get_object_or_404(Employee, pk=employee_id)
-        user_id = employee.user.id
-        user = get_object_or_404(User, pk=user_id)
-        user.delete()
-
-        return Response(status=status.HTTP_204_NO_CONTENT)
-    except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
 
 
 @api_view(['POST'])
@@ -150,49 +159,24 @@ def send_tasks_for_appraisal(request):
             )
         return JsonResponse({'message': 'Tasks sent for appraisal successfully'}, status=200)
     return JsonResponse({'error': 'Invalid request method'}, status=400)
-    
-    
-
-@api_view(['POST'])
-def register_employee(request):
-   
-    user_data = {
-        'username': request.data.get('username'),
-        'email': request.data.get('email'),
-        'password': request.data.get('password')
-    }
-    
   
-    user = User.objects.create_user(
-        username=user_data['username'],
-        email=user_data['email'],
-        password=user_data['password']
-    )
-    
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def employee_attributes(request):
+    try:
+        employee = request.user.employee
+        attributes = Attributes.objects.get(employee=employee)
+        serializer = AttributesSerializer(attributes)
+        return Response(serializer.data)
+    except Attributes.DoesNotExist:
+        return Response({'error': 'Attributes not found for this employee'}, status=404)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
   
-    employee_data = {
-        'user': user.id,  
-        'date_of_joining': request.data.get('dateOfJoining'),
-        'designation': request.data.get('designation'),
-        'contact_no': request.data.get('contactNo'),
-        'role': request.data.get('role'),
-        'email': request.data.get('email'),
-        'first_name': request.data.get('firstName'),
-        'last_name': request.data.get('lastName'),
-        'date_of_birth':request.data.get('dateOfBirth'),
-        'location':request.data.get('location')
-    }
-    
 
-    serializer = EmployeeSerializer(data=employee_data)
-    
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED,)
-    
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
+#    //===================================================Admin Functionalities======================================== 
 @api_view(['GET'])
 def current_employees(request):
     employees_count = Employee.objects.count()
@@ -209,12 +193,51 @@ def employees_with_unrated_tasks_count(request):
 
 
 
+@api_view(['POST'])
+def register_employee(request):
+
+    user_data = {
+        'username': request.data.get('username'),
+        'email': request.data.get('email'),
+        'password': request.data.get('password')
+    }
+    
+    user = User.objects.create_user(
+        username=user_data['username'],
+        email=user_data['email'],
+        password=user_data['password']
+    )
+    
+    employee_data = {
+        'user': user.id,  
+        'date_of_joining': request.data.get('dateOfJoining'),
+        'designation': request.data.get('designation'),
+        'contact_no': request.data.get('contactNo'),
+        'role': request.data.get('role'),
+        'email': request.data.get('email'),
+        'first_name': request.data.get('firstName'),
+        'last_name': request.data.get('lastName'),
+        'date_of_birth':request.data.get('dateOfBirth'),
+        'location':request.data.get('location')
+    }
+    
+    serializer = EmployeeSerializer(data=employee_data)
+    
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED,)
+    
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
 @api_view(['GET'])
 def EmployeesWithTasksForRating(request):
     one_year_ago = timezone.now().date() - timedelta(days=365)
     employees = Employee.objects.filter( Q(task__rating__isnull=True) & Q(task__task_send=True) & Q(date_of_joining__lte=one_year_ago)).distinct()
     serializer = EmployeeSerializer(employees, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 
 @api_view(['GET'])
@@ -225,6 +248,8 @@ def get_employee_tasks(request, employee_id):
         return Response(serializer.data)
     except Task.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
+
+
 
 @api_view(['POST'])
 def save_task_rating(request, task_id):
@@ -247,6 +272,7 @@ def save_task_rating(request, task_id):
         return Response({'message': 'Task rating saved successfully'}, status=status.HTTP_200_OK)
     else:
         return Response({'error': 'Invalid rating value'}, status=status.HTTP_400_BAD_REQUEST)
+    
 
 
 @api_view(['POST'])
@@ -277,15 +303,6 @@ def save_attribute_ratings(request, employee_id):
 
 
 
-@api_view(['GET'])
-def get_employee_details(request, id):
-    try:
-        employee = Employee.objects.get(id=id)
-        serializer = EmployeeSerializer(employee)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    except Employee.DoesNotExist:
-        return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
-
 @api_view(['PUT'])
 def edit_employee_details(request,pk):
     try:
@@ -298,43 +315,41 @@ def edit_employee_details(request,pk):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def notifications(request):
-    notifications = Notification.objects.filter(user=request.user, is_read=False)
-    serializer = NotificationSerializer(notifications, many=True)
-    return Response(serializer.data)
-
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def mark_notifications_as_read(request):
-   
-    Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
-
     
-    notifications_to_delete = Notification.objects.filter(user=request.user, is_read=True)
-    deleted_count, _ = notifications_to_delete.delete() 
-    
-    return Response({'message': f'{deleted_count} notifications marked as read and deleted'})
 
 
-
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def employee_attributes(request):
+@api_view(['DELETE'])
+def delete_employee(request, employee_id):
     try:
-        employee = request.user.employee
-        attributes = Attributes.objects.get(employee=employee)
-        serializer = AttributesSerializer(attributes)
-        return Response(serializer.data)
-    except Attributes.DoesNotExist:
-        return Response({'error': 'Attributes not found for this employee'}, status=404)
+        employee = get_object_or_404(Employee, pk=employee_id)
+        user_id = employee.user.id
+        user = get_object_or_404(User, pk=user_id)
+        user.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
     except Exception as e:
-        return Response({'error': str(e)}, status=500)
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+@api_view(['GET'])
+def get_employee_details(request, id):
+    try:
+        employee = Employee.objects.get(id=id)
+        serializer = EmployeeSerializer(employee)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Employee.DoesNotExist:
+        return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+
+
+
+
+
+
+
+
 
 
 
