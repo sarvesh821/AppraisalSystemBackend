@@ -157,7 +157,7 @@ def send_tasks_for_appraisal(request):
         for admin in admin_users:
             Notification.objects.create(
                 user=admin,
-                message=f" {employee.user.first_name} {employee.user.last_name} has sent tasks for appraisal."
+                message=f" {employee.first_name} {employee.last_name} has sent tasks for appraisal."
             )
         return JsonResponse({'message': 'Tasks sent for appraisal successfully'}, status=200)
     return JsonResponse({'error': 'Invalid request method'}, status=400)
@@ -178,8 +178,18 @@ def employee_attributes(request):
         return Response({'error': str(e)}, status=500)
   
 
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_unrated_tasks_for_user(request):
+    user = request.user
+    tasks = Task.objects.filter(employee=user.employee, is_appraisable=True, rating=None, task_send=False)
+    serializer = TaskSerializer(tasks, many=True)
+    return Response({'tasks': serializer.data})
+
 #    //===================================================Admin Functionalities======================================== 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminUser])
 def current_employees(request):
     employees_count = Employee.objects.count()
     return Response({'count': employees_count})
@@ -187,6 +197,7 @@ def current_employees(request):
 
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminUser])
 def employees_with_unrated_tasks_count(request):
     one_year_ago = timezone.now().date() - timedelta(days=365)
     employees = Employee.objects.filter(Q(task__is_appraisable=True) & Q(task__task_send=True) & Q(task__rating__isnull=True) & Q(date_of_joining__lte=one_year_ago)).distinct()
@@ -196,6 +207,7 @@ def employees_with_unrated_tasks_count(request):
 
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdminUser])
 def register_employee(request):
 
     user_data = {
@@ -234,6 +246,7 @@ def register_employee(request):
 
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminUser])
 def EmployeesWithTasksForRating(request):
     one_year_ago = timezone.now().date() - timedelta(days=365)
     employees = Employee.objects.filter( Q(task__rating__isnull=True) & Q(task__task_send=True) & Q(date_of_joining__lte=one_year_ago)).distinct()
@@ -243,6 +256,7 @@ def EmployeesWithTasksForRating(request):
 
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def get_employee_tasks(request, employee_id):
     try:
         tasks = Task.objects.filter(employee__id=employee_id,rating__isnull=True)
@@ -254,6 +268,7 @@ def get_employee_tasks(request, employee_id):
 
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdminUser])
 def save_task_rating(request, task_id):
     try:
         task = Task.objects.get(id=task_id)
