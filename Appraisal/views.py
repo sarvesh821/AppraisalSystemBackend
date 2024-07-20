@@ -344,12 +344,36 @@ def delete_employee(request, employee_id):
         employee = get_object_or_404(Employee, pk=employee_id)
         user_id = employee.user.id
         user = get_object_or_404(User, pk=user_id)
+        employee.delete()
         user.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
     except Exception as e:
+        print(f"Error deleting employee: {e}")
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated,IsAdminUser])
+def rated_tasks_of_employee(request, employee_id):
+    try:
+        employee = Employee.objects.get(id=employee_id)
+        rated_tasks = Task.objects.filter(employee=employee).exclude(rating=None)
+
+        rated_tasks_serializer = TaskSerializer(rated_tasks, many=True)
+
+        return Response({
+            'employee_name': f"{employee.first_name} {employee.last_name}",
+            'rated_tasks': rated_tasks_serializer.data,
+        })
+    except Employee.DoesNotExist:
+        return Response({'error': 'Employee not found'}, status=404)
+    except Task.DoesNotExist:
+        return Response({'error': 'Tasks not found'}, status=404)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+    
 
 
 @api_view(['GET'])
