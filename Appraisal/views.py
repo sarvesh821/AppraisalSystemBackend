@@ -66,6 +66,20 @@ def mark_notifications_as_read(request):
 
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_info(request):
+    user = request.user
+    user_info = {
+        'id': user.id,
+        'username': user.username,
+        'email': user.email,
+        'is_staff': user.is_staff,
+       
+    }
+    return Response(user_info)
+
+
 # //====================================================Login Functionalities=========================================
 @api_view(['POST'])
 def login_view(request):
@@ -85,8 +99,9 @@ def login_view(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout_view(request):
-    logout(request)
-    return Response({"detail": "Successfully logged out."}, status=status.HTTP_200_OK)
+    if request.auth:
+        request.auth.delete()
+    return Response({'status': 'success'}, status=200)
 
 
 
