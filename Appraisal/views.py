@@ -80,6 +80,23 @@ def user_info(request):
     return Response(user_info)
 
 
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated,IsAdminUser])
+def validate_token_admin(request):
+    return Response({'detail': 'Token is valid'}, status=status.HTTP_200_OK)
+
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def validate_token_employee(request):
+  
+    if request.user.is_staff:  
+        return Response({'detail': 'Admins are not allowed'}, status=status.HTTP_403_FORBIDDEN)
+    return Response({'detail': 'Token is valid'}, status=status.HTTP_200_OK)
+
+
 # //====================================================Login Functionalities=========================================
 @api_view(['POST'])
 def login_view(request):
