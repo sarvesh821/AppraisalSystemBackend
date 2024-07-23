@@ -1,7 +1,9 @@
 from django.urls import path, include
 from . import views
+from rest_framework.authtoken.views import obtain_auth_token
 
 urlpatterns = [
+    path('api-token-auth/', obtain_auth_token, name='api_token_auth'),
     path('api/validate-token-admin/', views.validate_token_admin, name='validate_token'),
     path('api/validate-token-employee/', views.validate_token_employee, name='validate_token'),
     path('api/user-info/', views.user_info, name='user-info'),
