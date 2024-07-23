@@ -99,6 +99,7 @@ def validate_token_employee(request):
 
 # //====================================================Login Functionalities=========================================
 @api_view(['POST'])
+
 def login_view(request):
     username = request.data.get('username')
     password = request.data.get('password')
