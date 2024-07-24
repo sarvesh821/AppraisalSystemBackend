@@ -21,7 +21,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q
 from .models import Attributes, Employee, Notification, Task, User
-from Api.serializers import AttributesSerializer, EmployeeSerializer, NotificationSerializer ,TaskSerializer
+from Api.serializers import AttributesSerializer, EmployeeSerializer, NotificationSerializer ,TaskSerializer, UserSerializer
 from rest_framework.authtoken.models import Token
 from django.views.decorators.csrf import csrf_exempt
 from django.middleware.csrf import get_token
@@ -364,15 +364,12 @@ def edit_employee_details(request, pk):
         return Response(status=status.HTTP_404_NOT_FOUND)
     if request.method == 'PUT':
         user = employee.user
+        user_serializer = UserSerializer(user, data=request.data)
+        if user_serializer.is_valid():
+            user_serializer.save()
+        
         serializer = EmployeeSerializer(employee, data=request.data)
         if serializer.is_valid():
-            if 'username' in request.data:
-                user.username = request.data['username']
-            if 'email' in request.data:
-                user.email = request.data['email']
-            if 'password' in request.data:
-                user.set_password(request.data['password'])
-            user.save()
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

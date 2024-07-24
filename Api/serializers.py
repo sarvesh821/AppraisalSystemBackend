@@ -4,7 +4,7 @@ from Appraisal.models import Employee, Task, Attributes,Notification
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email']
+        fields = ['username', 'email', 'password']
 
 class EmployeeSerializer(serializers.ModelSerializer):
     has_completed_one_year = serializers.SerializerMethodField()
