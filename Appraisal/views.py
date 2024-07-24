@@ -354,24 +354,25 @@ def save_attribute_ratings(request, employee_id):
 
 
 
+
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated, IsAdminUser])
-def edit_employee_details(request,pk):
+def edit_employee_details(request, pk):
     try:
         employee = Employee.objects.get(pk=pk)
     except Employee.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
-    if request.method=='PUT':
+    if request.method == 'PUT':
         user = employee.user
-        if 'username' in request.data:
-            user.username = request.data['username']
-        if 'email' in request.data:
-            user.email = request.data['email']
-        if 'password' in request.data:
-            user.set_password(request.data['password'])
-        user.save()
         serializer = EmployeeSerializer(employee, data=request.data)
         if serializer.is_valid():
+            if 'username' in request.data:
+                user.username = request.data['username']
+            if 'email' in request.data:
+                user.email = request.data['email']
+            if 'password' in request.data:
+                user.set_password(request.data['password'])
+            user.save()
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
