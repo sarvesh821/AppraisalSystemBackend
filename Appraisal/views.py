@@ -362,6 +362,14 @@ def edit_employee_details(request,pk):
     except Employee.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
     if request.method=='PUT':
+        user = employee.user
+        if 'username' in request.data:
+            user.username = request.data['username']
+        if 'email' in request.data:
+            user.email = request.data['email']
+        if 'password' in request.data:
+            user.set_password(request.data['password'])
+        user.save()
         serializer = EmployeeSerializer(employee, data=request.data)
         if serializer.is_valid():
             serializer.save()
@@ -373,17 +381,16 @@ def edit_employee_details(request,pk):
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def delete_employee(request, employee_id):
-    try:
-        employee = get_object_or_404(Employee, pk=employee_id)
-        user_id = employee.user.id
-        user = get_object_or_404(User, pk=user_id)
-        employee.delete()
-        user.delete()
-
-        return Response(status=status.HTTP_204_NO_CONTENT)
-    except Exception as e:
-        print(f"Error deleting employee: {e}")
-        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    if request.method == 'DELETE':
+        try:
+            employee = get_object_or_404(Employee, pk=employee_id)
+            user_id = employee.user.id
+            employee.delete()
+            return JsonResponse({'message': 'Employee and related User deleted successfully'}, status=200)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+    else:
+        return JsonResponse({'error': 'Invalid request method'}, status=405)
 
 
 
