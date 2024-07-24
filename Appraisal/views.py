@@ -99,16 +99,19 @@ def validate_token_employee(request):
 
 # //====================================================Login Functionalities=========================================
 @api_view(['POST'])
-
 def login_view(request):
     username = request.data.get('username')
     password = request.data.get('password')
     user = authenticate(request, username=username, password=password)
     
     if user is not None:
-        login(request, user)
-        token, created = Token.objects.get_or_create(user=user)
-        return Response({'message': 'Login successful', 'is_staff': user.is_staff,'token':token.key}, status=status.HTTP_200_OK)
+        
+        if user.is_superuser or Employee.objects.filter(user=user).exists():
+            login(request, user)
+            token, created = Token.objects.get_or_create(user=user)
+            return Response({'message': 'Login successful', 'is_staff': user.is_staff, 'token': token.key}, status=status.HTTP_200_OK)
+        else:
+            return Response({'error': 'User is not an employee or superuser'}, status=status.HTTP_403_FORBIDDEN)
     else:
         return Response({'error': 'Invalid username or password'}, status=status.HTTP_400_BAD_REQUEST)
 
