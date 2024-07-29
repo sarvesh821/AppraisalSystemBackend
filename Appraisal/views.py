@@ -55,13 +55,9 @@ def notifications(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def mark_notifications_as_read(request):
-   
     Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
-
-    
     notifications_to_delete = Notification.objects.filter(user=request.user, is_read=True)
     deleted_count, _ = notifications_to_delete.delete() 
-    
     return Response({'message': f'{deleted_count} notifications marked as read and deleted'})
 
 
@@ -74,8 +70,7 @@ def user_info(request):
         'id': user.id,
         'username': user.username,
         'email': user.email,
-        'is_staff': user.is_staff,
-       
+        'is_staff': user.is_staff,   
     }
     return Response(user_info)
 
@@ -91,7 +86,6 @@ def validate_token_admin(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def validate_token_employee(request):
-  
     if request.user.is_staff:  
         return Response({'detail': 'Admins are not allowed'}, status=status.HTTP_403_FORBIDDEN)
     return Response({'detail': 'Token is valid'}, status=status.HTTP_200_OK)
@@ -149,6 +143,25 @@ def create_task(request):
 
 
 
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_task(request, task_id):
+    try:
+        task = Task.objects.get(id=task_id, employee=request.user.employee)
+    except Task.DoesNotExist:
+        return Response({"detail": "Task not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    if task.task_send:
+        return Response({"detail": "Cannot edit tasks that have been sent for appraisal"}, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = TaskSerializer(task, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -161,7 +174,7 @@ def employee_tasks(request):
 
     try:
         employee = request.user.employee
-        tasks_to_rate = Task.objects.filter(employee=employee, rating=None,is_appraisable=True )
+        tasks_to_rate = Task.objects.filter(employee=employee, rating=None )
         rated_tasks = Task.objects.filter(employee=employee).exclude(rating=None)
 
         tasks_to_rate_serializer = TaskSerializer(tasks_to_rate, many=True)
@@ -295,7 +308,7 @@ def EmployeesWithTasksForRating(request):
 @permission_classes([IsAuthenticated])
 def get_employee_tasks(request, employee_id):
     try:
-        tasks = Task.objects.filter(employee__id=employee_id,rating__isnull=True)
+        tasks = Task.objects.filter(employee__id=employee_id,rating__isnull=True,is_appraisable=True)
         serializer = TaskSerializer(tasks, many=True)
         return Response(serializer.data)
     except Task.DoesNotExist:

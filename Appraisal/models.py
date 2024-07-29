@@ -9,7 +9,7 @@ class Employee(models.Model):
         ('EMPLOYEE', 'Employee'),
         ('ADMIN', 'Admin'),
     ]
-    
+   
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     date_of_joining = models.DateField()
     date_of_birth=models.DateField(default=date.today)
