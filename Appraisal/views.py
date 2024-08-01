@@ -30,6 +30,7 @@ from django.http import JsonResponse
 
 
 # //============================================Base===============================================================
+# this function is used to get csrf token and set it in cookies
 def get_csrf_token(request):
     token = get_token(request)
     response = JsonResponse({'csrfToken': token})
@@ -38,11 +39,7 @@ def get_csrf_token(request):
 
 
 
-def BASE(request):
-    return render(request, "firstPage.html")
-
-
-
+# this function is used to display notifications either on employee/admin navbar
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def notifications(request):
@@ -52,6 +49,7 @@ def notifications(request):
 
 
 
+# this function is used to mark notifications as read and delete from notification modal
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def mark_notifications_as_read(request):
@@ -76,6 +74,7 @@ def user_info(request):
 
 
 
+# this function is used to validate token and if user is admin 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated,IsAdminUser])
 def validate_token_admin(request):
@@ -83,6 +82,7 @@ def validate_token_admin(request):
 
 
 
+# this function is used to validate employee and check he is not admin
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def validate_token_employee(request):
@@ -92,6 +92,7 @@ def validate_token_employee(request):
 
 
 # //====================================================Login Functionalities=========================================
+# this is login function
 @api_view(['POST'])
 def login_view(request):
     username = request.data.get('username')
@@ -111,6 +112,7 @@ def login_view(request):
 
 
 
+#this is logout function
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout_view(request):
@@ -121,6 +123,7 @@ def logout_view(request):
 
 
 # //===========================================Employee Functionalities=======================================
+# this function used to display employee details on employee dashboard
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def employee_detail(request):
@@ -130,6 +133,7 @@ def employee_detail(request):
 
 
 
+# this function is used to save the task data send by user in tasks modal
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_task(request):
@@ -143,6 +147,7 @@ def create_task(request):
 
 
 
+# this function is used to update data of particular task in task modal
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def update_task(request, task_id):
@@ -163,6 +168,7 @@ def update_task(request, task_id):
     
 
 
+# this function is used to split tasks of employee that are rated/not rated and send as a response to frontend
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def employee_tasks(request):
@@ -191,6 +197,7 @@ def employee_tasks(request):
   
 
 
+# this functions sends the tasks to admin when are send by employee
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def send_tasks_for_appraisal(request):
@@ -213,6 +220,7 @@ def send_tasks_for_appraisal(request):
   
 
 
+# this function is used to fetch Attributes of employee from employee modal and display on employee side 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def employee_attributes(request):
@@ -227,7 +235,7 @@ def employee_attributes(request):
         return Response({'error': str(e)}, status=500)
   
 
-
+# this is used to send data of tasks that are yet not rated by admin
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_unrated_tasks_for_user(request):
@@ -237,6 +245,7 @@ def get_unrated_tasks_for_user(request):
     return Response({'tasks': serializer.data})
 
 #    //===================================================Admin Functionalities======================================== 
+# this function is used to display count of total employees in modal
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def current_employees(request):
@@ -244,7 +253,7 @@ def current_employees(request):
     return Response({'count': employees_count})
 
 
-
+# this function is used to display count of employees who have send there tasks for appraisal
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def employees_with_unrated_tasks_count(request):
@@ -255,6 +264,7 @@ def employees_with_unrated_tasks_count(request):
 
 
 
+# this function is used to register a new employee 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def register_employee(request):
@@ -294,6 +304,7 @@ def register_employee(request):
 
 
 
+# this function used to filter employees who have send there tasks for appraisal
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def EmployeesWithTasksForRating(request):
@@ -304,6 +315,7 @@ def EmployeesWithTasksForRating(request):
 
 
 
+# this function gives the tasks of employee which he has send for appraisal
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_employee_tasks(request, employee_id):
@@ -316,6 +328,7 @@ def get_employee_tasks(request, employee_id):
 
 
 
+# this function saves rating of particular task when marked 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def save_task_rating(request, task_id):
@@ -341,6 +354,7 @@ def save_task_rating(request, task_id):
     
 
 
+# this function saves rating of Attributes
 @api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def save_attribute_ratings(request, employee_id):
@@ -371,6 +385,7 @@ def save_attribute_ratings(request, employee_id):
 
 
 
+# this function saves the update info send of employee in employee modal
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def edit_employee_details(request, pk):
@@ -392,6 +407,7 @@ def edit_employee_details(request, pk):
     
 
 
+# this function allow to delete employee
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def delete_employee(request, employee_id):
@@ -408,6 +424,7 @@ def delete_employee(request, employee_id):
 
 
 
+# this function filter the tasks of particular employee that are rated
 @api_view(['GET'])
 @permission_classes([IsAuthenticated,IsAdminUser])
 def rated_tasks_of_employee(request, employee_id):
